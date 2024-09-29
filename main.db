@@ -1,0 +1,83 @@
+-- Crear la base de datos
+CREATE DATABASE IF NOT EXISTS potato_main;
+USE potato_main;
+
+-- Tabla de usuarios
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    apellido VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    contrasena_hash CHAR(60) NOT NULL, -- Para almacenar hashes bcrypt
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ultimo_acceso TIMESTAMP NULL,
+    activo BOOLEAN DEFAULT TRUE
+);
+
+-- Tabla de productos
+CREATE TABLE productos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    precio DECIMAL(10, 2) NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla de pedidos
+CREATE TABLE pedidos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    fecha_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estado ENUM('pendiente', 'procesando', 'enviado', 'entregado', 'cancelado') DEFAULT 'pendiente',
+    total DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+
+-- Tabla de detalles de pedidos
+CREATE TABLE detalles_pedido (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pedido_id INT NOT NULL,
+    producto_id INT NOT NULL,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (pedido_id) REFERENCES pedidos(id),
+    FOREIGN KEY (producto_id) REFERENCES productos(id)
+);
+
+-- Insertar usuarios de ejemplo (las contraseñas están hasheadas)
+INSERT INTO usuarios (nombre, apellido, email, contrasena_hash) VALUES
+('Juan', 'Pérez', 'juan@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'),
+('María', 'García', 'maria@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'),
+('Carlos', 'Rodríguez', 'carlos@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
+
+-- Insertar productos de ejemplo
+INSERT INTO productos (nombre, descripcion, precio, stock) VALUES
+('Patata Roja', 'Patatas rojas frescas', 2.50, 100),
+('Patata Blanca', 'Patatas blancas de alta calidad', 2.00, 150),
+('Patata Dulce', 'Batatas orgánicas', 3.00, 75);
+
+-- Insertar pedidos de ejemplo
+INSERT INTO pedidos (usuario_id, total) VALUES
+(1, 12.50),
+(2, 10.00),
+(3, 15.00);
+
+-- Insertar detalles de pedidos de ejemplo
+INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio_unitario) VALUES
+(1, 1, 3, 2.50),
+(1, 2, 2, 2.00),
+(2, 2, 5, 2.00),
+(3, 3, 5, 3.00);
+
+-- Crear un usuario con acceso limitado para la aplicación
+CREATE USER 'potato_app'@'localhost' IDENTIFIED BY 'patata_segura_123';
+GRANT SELECT, INSERT, UPDATE ON potato_main.* TO 'potato_app'@'localhost';
+
+-- Crear una vista para información limitada de usuarios
+CREATE VIEW vista_usuarios_limitada AS
+SELECT id, nombre, apellido, email, fecha_registro, ultimo_acceso, activo
+FROM usuarios;
+
+-- Otorgar acceso a la vista en lugar de la tabla completa
+GRANT SELECT ON potato_main.vista_usuarios_limitada TO 'potato_app'@'localhost';
